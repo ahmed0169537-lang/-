@@ -1,0 +1,104 @@
+A.K/
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (auth)/
+│   │   │   │   ├── login/
+│   │   │   │   ├── register/
+│   │   │   │   └── forgot-password/
+│   │   │   ├── (dashboard)/
+│   │   │   │   ├── feed/
+│   │   │   │   ├── profile/
+│   │   │   │   ├── messages/
+│   │   │   │   ├── notifications/
+│   │   │   │   ├── stories/
+│   │   │   │   ├── reels/
+│   │   │   │   ├── marketplace/
+│   │   │   │   ├── groups/
+│   │   │   │   ├── pages/
+│   │   │   │   ├── events/
+│   │   │   │   ├── saved/
+│   │   │   │   ├── explore/
+│   │   │   │   └── admin/
+│   │   │   ├── layout.tsx
+│   │   │   └── providers.tsx
+│   │   ├── components/
+│   │   │   ├── ui/
+│   │   │   ├── auth/
+│   │   │   ├── feed/
+│   │   │   ├── profile/
+│   │   │   ├── messages/
+│   │   │   ├── stories/
+│   │   │   ├── reels/
+│   │   │   ├── comments/
+│   │   │   ├── notifications/
+│   │   │   ├── search/
+│   │   │   ├── marketplace/
+│   │   │   ├── groups/
+│   │   │   ├── pages/
+│   │   │   ├── events/
+│   │   │   └── admin/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── store/
+│   │   ├── types/
+│   │   ├── utils/
+│   │   └── styles/
+│   ├── public/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── tailwind.config.js
+│   ├── next.config.js
+│   └── .env.local
+├── backend/
+│   ├── src/
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   ├── users/
+│   │   │   ├── posts/
+│   │   │   ├── comments/
+│   │   │   ├── messages/
+│   │   │   ├── notifications/
+│   │   │   ├── stories/
+│   │   │   ├── reels/
+│   │   │   ├── marketplace/
+│   │   │   ├── groups/
+│   │   │   ├── pages/
+│   │   │   ├── events/
+│   │   │   ├── saved/
+│   │   │   ├── explore/
+│   │   │   ├── admin/
+│   │   │   └── websocket/
+│   │   ├── common/
+│   │   │   ├── guards/
+│   │   │   ├── interceptors/
+│   │   │   ├── filters/
+│   │   │   ├── decorators/
+│   │   │   ├── middleware/
+│   │   │   └── utils/
+│   │   ├── config/
+│   │   ├── database/
+│   │   ├── prisma/
+│   │   └── main.ts
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── test/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── nest-cli.json
+│   └── .env
+├── docker/
+│   ├── docker-compose.yml
+│   ├── Dockerfile.frontend
+│   ├── Dockerfile.backend
+│   └── nginx/
+│       └── nginx.conf
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── cd.yml
+├── docs/
+│   ├── api/
+│   └── database/
+└── README.md
