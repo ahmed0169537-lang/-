@@ -1,0 +1,620 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum PrivacyLevel {
+  PUBLIC
+  FRIENDS
+  PRIVATE
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  VIDEO
+  LINK
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  MESSAGE
+  MENTION
+  SHARE
+  FRIEND_REQUEST
+  EVENT
+  GROUP_INVITE
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum StoryType {
+  IMAGE
+  VIDEO
+  TEXT
+}
+
+enum PostStatus {
+  PUBLISHED
+  DRAFT
+  ARCHIVED
+  DELETED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  REJECTED
+}
+
+enum EventVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  username        String         @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  bio             String?
+  avatar          String?
+  coverImage      String?
+  gender          Gender?
+  birthDate       DateTime?
+  phoneNumber     String?
+  emailVerified   Boolean        @default(false)
+  isActive        Boolean        @default(true)
+  isBanned        Boolean        @default(false)
+  role            Role           @default(USER)
+  privacyLevel    PrivacyLevel   @default(PUBLIC)
+  lastLogin       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relations
+  posts           Post[]
+  comments        Comment[]
+  likes           Like[]
+  stories         Story[]
+  reels           Reel[]
+  messages        Message[]
+  sentMessages    Message[]      @relation("Sender")
+  receivedMessages Message[]     @relation("Receiver")
+  notifications   Notification[]
+  followers       Follow[]       @relation("Follower")
+  following       Follow[]       @relation("Following")
+  groups          GroupMember[]
+  pages           Page[]
+  events          EventParticipant[]
+  savedPosts      SavedPost[]
+  reports         Report[]
+  reportsModerated Report[]      @relation("Moderator")
+  devices         Device[]
+  sessions        Session[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  token         String   @unique
+  refreshToken  String   @unique
+  userAgent     String?
+  ipAddress     String?
+  expiresAt     DateTime
+  isRevoked     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Device {
+  id            String   @id @default(cuid())
+  userId        String
+  deviceId      String
+  deviceName    String?
+  deviceType    String
+  lastActive    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@map("devices")
+}
+
+model Post {
+  id              String         @id @default(cuid())
+  userId          String
+  content         String?
+  type            ContentType    @default(TEXT)
+  mediaUrls       String[]
+  hashtags        String[]
+  mentions        String[]
+  location        String?
+  status          PostStatus     @default(PUBLISHED)
+  isPinned        Boolean        @default(false)
+  isPublic        Boolean        @default(true)
+  likesCount      Int            @default(0)
+  commentsCount   Int            @default(0)
+  sharesCount     Int            @default(0)
+  viewsCount      Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments        Comment[]
+  likes           Like[]
+  shares          Share[]
+  reports         Report[]
+  savedBy         SavedPost[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@map("posts")
+}
+
+model Comment {
+  id              String     @id @default(cuid())
+  userId          String
+  postId          String
+  parentId        String?
+  content         String
+  mediaUrl        String?
+  likesCount      Int        @default(0)
+  repliesCount    Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post            Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent          Comment?   @relation("CommentReplies", fields: [parentId], references: [id])
+  replies         Comment[]  @relation("CommentReplies")
+  likes           CommentLike[]
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("comments")
+}
+
+model Like {
+  id              String   @id @default(cuid())
+  userId          String
+  postId          String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@map("likes")
+}
+
+model CommentLike {
+  id              String   @id @default(cuid())
+  userId          String
+  commentId       String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment         Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("comment_likes")
+}
+
+model Share {
+  id              String   @id @default(cuid())
+  userId          String
+  postId          String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("shares")
+}
+
+model SavedPost {
+  id              String   @id @default(cuid())
+  userId          String
+  postId          String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("saved_posts")
+}
+
+model Story {
+  id              String     @id @default(cuid())
+  userId          String
+  type            StoryType  @default(IMAGE)
+  content         String
+  mediaUrl        String?
+  expiresAt       DateTime
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views           StoryView[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("stories")
+}
+
+model StoryView {
+  id              String   @id @default(cuid())
+  userId          String
+  storyId         String
+  viewedAt        DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story           Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storyId])
+  @@map("story_views")
+}
+
+model Reel {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String?
+  description     String?
+  videoUrl        String
+  thumbnailUrl    String?
+  duration        Int?
+  likesCount      Int      @default(0)
+  commentsCount   Int      @default(0)
+  viewsCount      Int      @default(0)
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments        ReelComment[]
+  likes           ReelLike[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("reels")
+}
+
+model ReelComment {
+  id              String   @id @default(cuid())
+  userId          String
+  reelId          String
+  content         String
+  likesCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reel            Reel     @relation(fields: [reelId], references: [id], onDelete: Cascade)
+  likes           ReelCommentLike[]
+
+  @@map("reel_comments")
+}
+
+model ReelLike {
+  id              String   @id @default(cuid())
+  userId          String
+  reelId          String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reel            Reel     @relation(fields: [reelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reelId])
+  @@map("reel_likes")
+}
+
+model ReelCommentLike {
+  id              String   @id @default(cuid())
+  userId          String
+  commentId       String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment         ReelComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("reel_comment_likes")
+}
+
+model Message {
+  id              String         @id @default(cuid())
+  senderId        String
+  receiverId      String?
+  groupId         String?
+  content         String
+  mediaUrl        String?
+  fileUrl         String?
+  fileName        String?
+  fileSize        Int?
+  status          MessageStatus  @default(SENT)
+  isRead          Boolean        @default(false)
+  readAt          DateTime?
+  replyToId       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  sender          User           @relation("Sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver        User?          @relation("Receiver", fields: [receiverId], references: [id])
+  group           Group?         @relation(fields: [groupId], references: [id])
+  replyTo         Message?       @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies         Message[]      @relation("MessageReplies")
+  reactions       MessageReaction[]
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([groupId])
+  @@index([createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id              String   @id @default(cuid())
+  userId          String
+  messageId       String
+  emoji           String
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message         Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@map("message_reactions")
+}
+
+model Group {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  avatar          String?
+  coverImage      String?
+  type            String         @default("PUBLIC")
+  privacyLevel    PrivacyLevel   @default(PUBLIC)
+  isActive        Boolean        @default(true)
+  membersCount    Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  members         GroupMember[]
+  messages        Message[]
+  posts           GroupPost[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id              String   @id @default(cuid())
+  userId          String
+  groupId         String
+  role            String   @default("MEMBER")
+  isActive        Boolean  @default(true)
+  joinedAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("group_members")
+}
+
+model GroupPost {
+  id              String   @id @default(cuid())
+  groupId         String
+  userId          String
+  content         String?
+  mediaUrls       String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("group_posts")
+}
+
+model Page {
+  id              String   @id @default(cuid())
+  name            String
+  username        String   @unique
+  description     String?
+  avatar          String?
+  coverImage      String?
+  category        String?
+  website         String?
+  email           String?
+  phone           String?
+  address         String?
+  likesCount      Int      @default(0)
+  followersCount  Int      @default(0)
+  isVerified      Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId         String
+  posts           PagePost[]
+
+  @@map("pages")
+}
+
+model PagePost {
+  id              String   @id @default(cuid())
+  pageId          String
+  content         String?
+  mediaUrls       String[]
+  likesCount      Int      @default(0)
+  commentsCount   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  page            Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_posts")
+}
+
+model Event {
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  location        String?
+  venue           String?
+  startDate       DateTime
+  endDate         DateTime?
+  coverImage      String?
+  visibility      EventVisibility  @default(PUBLIC)
+  isOnline        Boolean          @default(false)
+  onlineLink      String?
+  maxAttendees    Int?
+  attendeesCount  Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  creator         User             @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creatorId       String
+  participants    EventParticipant[]
+
+  @@map("events")
+}
+
+model EventParticipant {
+  id              String   @id @default(cuid())
+  userId          String
+  eventId         String
+  status          String   @default("GOING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@map("event_participants")
+}
+
+model Follow {
+  id              String   @id @default(cuid())
+  followerId      String
+  followingId     String
+  createdAt       DateTime @default(now())
+  
+  follower        User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following       User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  userId          String
+  actorId         String?
+  type            NotificationType
+  content         String?
+  read            Boolean          @default(false)
+  data            Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor           User?            @relation(fields: [actorId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@index([read])
+  @@map("notifications")
+}
+
+model Report {
+  id              String         @id @default(cuid())
+  reporterId      String
+  postId          String?
+  commentId       String?
+  userId          String?
+  reason          String
+  description     String?
+  status          ReportStatus   @default(PENDING)
+  moderatorId     String?
+  moderatorNote   String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  reporter        User           @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator       User?          @relation("Moderator", fields: [moderatorId], references: [id])
+  post            Post?          @relation(fields: [postId], references: [id])
+  reportedUser    User?          @relation(fields: [userId], references: [id])
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String
+  action          String
+  entityType      String
+  entityId        String?
+  changes         Json?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
